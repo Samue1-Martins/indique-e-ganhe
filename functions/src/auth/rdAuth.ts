@@ -1,9 +1,7 @@
-import { getFirestore } from "firebase-admin/firestore";
 import axios from "axios";
 import { FieldValue } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/https";
-
-const db = getFirestore();
+import { db } from "../config/firebase";
 
 export async function getValidAccessToken(): Promise<string> {
   try {

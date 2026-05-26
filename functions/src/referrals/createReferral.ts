@@ -1,5 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import {db} from "../config/firebase";
+import { db } from "../config/firebase";
 import axios from "axios";
 import { FieldValue } from "firebase-admin/firestore";
 import { getValidAccessToken } from "../auth/rdAuth";
@@ -7,7 +7,7 @@ import { getValidAccessToken } from "../auth/rdAuth";
 export const createReferral = onCall(
   {
     region: "southamerica-east1",
-    secrets: ["RD_CLIENT_ID", "RD_CLIENT_SECRET"]
+    secrets: ["RD_CLIENT_ID", "RD_CLIENT_SECRET", "STAGE_ID", "RD_OWNER_ID"]
   },
   async (request) => {
     try {
@@ -27,13 +27,25 @@ export const createReferral = onCall(
 
       const accessToken = await getValidAccessToken();
 
+      const stageId = process.env.STAGE_ID;
+      const ownerId = process.env.RD_OWNER_ID;
+
+      if(!stageId || !ownerId) {
+        throw new HttpsError("internal", "Stage ID or Owner ID not found in environment variables.");
+      }
+
       const rdPayload = {
-        name: `Indication: ${restaurantName}`,
-        custom_fields: {
-          referrer_name: referrerName,
-          owner_name: ownerName,
-          owner_phone: ownerPhone,
-          city: city
+        data: {
+          name: `[Teste] Indicação: ${restaurantName}`,
+          stage_id: stageId,
+          owner_id: ownerId,
+          status: "ongoing",
+          custom_fields: {
+            referrer_name: referrerName,
+            owner_name: ownerName,
+            owner_phone: ownerPhone,
+            city: city
+          }
         }
       };
 
@@ -54,9 +66,12 @@ export const createReferral = onCall(
 
         rdDealId = rdResponse.data.data.id;
       } catch (apiError: any) {
+        const erroExatoDaRD = apiError.response?.data;
+        console.error("⛔ ERRO DA RD STATION:", JSON.stringify(erroExatoDaRD, null, 2));
+        
         throw new HttpsError(
           "internal",
-          `CRM API Error: ${apiError.response?.data?.error_description || apiError.message}`
+          `Falha ao criar o negócio no CRM. Detalhes no log do Firebase.`
         );
       }
 
@@ -73,7 +88,7 @@ export const createReferral = onCall(
           ownerPhone: ownerPhone,
           city: city,
           rdDealId: rdDealId,
-          status: "open",
+          status: "ongoing",
           paymentStatus: "ineligible",
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp()
