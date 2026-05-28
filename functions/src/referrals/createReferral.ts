@@ -72,12 +72,6 @@ export const createReferral = onCall(
 
       let rdDealId = "";
 
-      const testCustomFields = {
-        estado: state 
-      };
-
-      console.log("📦 ENVIANDO PARA RD:", JSON.stringify(testCustomFields));
-
       const rdDealPayload = {
         data: {
           name: `[Teste] Indicação: ${restaurantName}`,
@@ -85,7 +79,11 @@ export const createReferral = onCall(
           owner_id: ownerId,
           status: "ongoing",
           contact_ids: [rdContactId],
-          custom_fields: testCustomFields
+          custom_fields: {
+            "cidade": city || "",
+            "estado": state,
+            "nome-do-indicador-teste-api": referrerName || ""
+          }
         }
       };
 
