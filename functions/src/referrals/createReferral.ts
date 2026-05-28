@@ -7,7 +7,9 @@ import { getValidAccessToken } from "../auth/rdAuth";
 export const createReferral = onCall(
   {
     region: "southamerica-east1",
-    secrets: ["RD_CLIENT_ID", "RD_CLIENT_SECRET", "STAGE_ID", "RD_OWNER_ID"]
+    secrets: [
+      "RD_CLIENT_ID", "RD_CLIENT_SECRET", "STAGE_ID", "RD_OWNER_ID",
+    ]
   },
   async (request) => {
     try {
@@ -18,15 +20,15 @@ export const createReferral = onCall(
         restaurantName,
         ownerName,
         ownerPhone,
-        city
+        city,
+        state
       } = request.data;
 
-      if (!userId || !restaurantName || !ownerPhone) {
+      if (!userId || !restaurantName || !ownerPhone || !state) {
         throw new HttpsError("invalid-argument", "Missing required payload data.");
       }
 
       const accessToken = await getValidAccessToken();
-
       const stageId = process.env.STAGE_ID;
       const ownerId = process.env.RD_OWNER_ID;
 
@@ -34,40 +36,71 @@ export const createReferral = onCall(
         throw new HttpsError("internal", "Stage ID or Owner ID not found in environment variables.");
       }
 
-      const rdPayload = {
+      const axiosConfig = {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        }
+      };
+
+      let rdContactId = "";
+
+      const contactPayload = {
+        data: {
+          name: ownerName || "Contato sem nome", 
+          phones: [
+            {
+              phone: ownerPhone,
+              type: "work"
+            }
+          ]
+        }
+      };
+      
+
+      try {
+        const contactResponse = await axios.post(
+          "https://api.rd.services/crm/v2/contacts",
+          contactPayload,
+          axiosConfig
+        );
+        rdContactId = contactResponse.data.data.id;
+      } catch (apiError: any) {
+        throw new HttpsError("internal", "Falha ao criar o contato no CRM da RD.");
+      }
+
+      let rdDealId = "";
+
+      const testCustomFields = {
+        estado: state 
+      };
+
+      console.log("📦 ENVIANDO PARA RD:", JSON.stringify(testCustomFields));
+
+      const rdDealPayload = {
         data: {
           name: `[Teste] Indicação: ${restaurantName}`,
           stage_id: stageId,
           owner_id: ownerId,
           status: "ongoing",
-          custom_fields: {
-            referrer_name: referrerName,
-            owner_name: ownerName,
-            owner_phone: ownerPhone,
-            city: city
-          }
+          contact_ids: [rdContactId],
+          custom_fields: testCustomFields
         }
       };
 
-      let rdDealId = "";
-
       try {
-        const rdResponse = await axios.post(
+        const dealResponse = await axios.post(
           "https://api.rd.services/crm/v2/deals",
-          rdPayload,
-          {
-            headers: {
-              "Accept": "application/json",
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${accessToken}`
-            }
-          }
+          rdDealPayload,
+          axiosConfig
         );
 
-        rdDealId = rdResponse.data.data.id;
+        rdDealId = dealResponse.data.data.id;
+        console.log(`✅ Negociação criada e vinculada com sucesso! ID: ${rdDealId}`);
       } catch (apiError: any) {
-        const erroExatoDaRD = apiError.response?.data;
-        console.error("⛔ ERRO DA RD STATION:", JSON.stringify(erroExatoDaRD, null, 2));
+        const errorRD = apiError.response?.data;
+        console.error("⛔ ERRO DA RD STATION:", JSON.stringify(errorRD, null, 2));
         
         throw new HttpsError(
           "internal",
@@ -86,8 +119,10 @@ export const createReferral = onCall(
           restaurantName: restaurantName,
           ownerName: ownerName,
           ownerPhone: ownerPhone,
-          city: city,
-          rdDealId: rdDealId,
+          city: city || "",
+          state: state,
+          rdDealId: rdDealId,           
+          rdContactId: rdContactId,     
           status: "ongoing",
           paymentStatus: "ineligible",
           createdAt: FieldValue.serverTimestamp(),
@@ -100,7 +135,8 @@ export const createReferral = onCall(
       return {
         success: true,
         referralId: newReferralRef.id,
-        rdDealId: rdDealId
+        rdDealId: rdDealId,
+        rdContactId: rdContactId
       };
     } catch (globalError: any) {
       if (globalError instanceof HttpsError) {
