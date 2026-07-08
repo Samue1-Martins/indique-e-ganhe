@@ -1,11 +1,11 @@
-# ⚙️ Motor de Integração: Indique e Ganhe (Gula ↔ RD Station)
+# ⚙️ Motor de Integração: Indique e Ganhe
 
-Este repositório contém a lógica de backend e a orquestração de dados para o programa de indicações do ecossistema Gula. 
+Este repositório contém a lógica de backend e a orquestração de dados para o programa de indicações. 
 
 > ⚠️ **Escopo do Projeto:** Este repositório hospeda **exclusivamente o motor da aplicação** (Firebase Cloud Functions, Webhooks e integrações de API). A interface de usuário (UI), telas do formulário e o gerenciamento de estado do lado do cliente residem no repositório principal do aplicativo Flutter. O objetivo desta camada isolada é garantir a segurança das chaves de API, abstrair regras de negócio externas do front-end e manter a integridade da arquitetura de dados.
 
 ## 🎯 O que é este motor?
-Uma ponte serverless construída em Node.js/TypeScript que conecta os usuários do aplicativo Gula ao funil comercial da Digi Office na RD Station CRM. Ele é responsável por receber as indicações, higienizar o payload, revalidar tokens de autenticação dinamicamente e injetar os dados no CRM respeitando sua estrutura estritamente relacional (separando Contatos e Negociações).
+Uma ponte serverless construída em Node.js/TypeScript que conecta os usuários do aplicativo Gula ao funil comercial do mesmo na RD Station CRM. Ele é responsável por receber as indicações, higienizar o payload, revalidar tokens de autenticação dinamicamente e injetar os dados no CRM respeitando sua estrutura estritamente relacional (separando Contatos e Negociações).
 
 ## 🔄 Como funciona o fluxo?
 
